@@ -55,10 +55,10 @@ export default function LoanCalculator() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             BNPL Loan Calculator
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-base md:text-lg">
             Calculate your Buy Now Pay Later repayment plan
           </p>
         </div>
@@ -66,7 +66,7 @@ export default function LoanCalculator() {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Form Section */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6">
               Loan Details
             </h2>
             
@@ -117,7 +117,7 @@ export default function LoanCalculator() {
               <button
                 onClick={handleCalculate}
                 disabled={!isFormValid}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 md:py-4 px-5 md:px-6 rounded-xl font-semibold text-base md:text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 Calculate Loan
               </button>
@@ -126,7 +126,7 @@ export default function LoanCalculator() {
 
           {/* Results Section */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6">
               Repayment Summary
             </h2>
             
