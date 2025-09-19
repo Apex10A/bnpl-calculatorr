@@ -17,12 +17,13 @@ const ResultCard: React.FC<ResultCardProps> = ({
   highlight = false,
 }) => {
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    if (!isFinite(amount)) return '₦0';
+    const negative = amount < 0;
+    const abs = Math.abs(amount);
+    const [intPart, fracPart] = abs.toString().split('.');
+    const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const formatted = fracPart ? `${withCommas}.${fracPart}` : withCommas;
+    return `${negative ? '-' : ''}₦${formatted}`;
   };
 
   return (
