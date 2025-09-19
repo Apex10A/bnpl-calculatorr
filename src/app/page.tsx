@@ -6,8 +6,14 @@ import InputField from './components/InputField';
 import ResultCard from './components/ResultCard';
 import { useCalculator } from './hooks/useCalculator';
 
-const formatNumber = (num: number): string => {
-  return num.toLocaleString();
+const formatNumberStringPreserveDecimals = (value: string): string => {
+  const trimmed = value.trim().replace(/,/g, '');
+  if (trimmed === '') return '';
+  // Allow optional decimal part; if invalid, return as-is
+  if (!/^[-+]?\d*(\.\d+)?$/.test(trimmed)) return value;
+  const [intPart, fracPart] = trimmed.split('.');
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return fracPart !== undefined ? `${withCommas}.${fracPart}` : withCommas;
 };
 
 export default function LoanCalculator() {
@@ -19,13 +25,11 @@ export default function LoanCalculator() {
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
 
   const handleItemCostBlur = () => {
-    const num = parseFloat(itemCost.replace(/,/g, '').trim()) || 0;
-    setItemCost(formatNumber(num));
+    setItemCost(formatNumberStringPreserveDecimals(itemCost));
   };
 
   const handleDownPaymentBlur = () => {
-    const num = parseFloat(downPayment.replace(/,/g, '').trim()) || 0;
-    setDownPayment(formatNumber(num));
+    setDownPayment(formatNumberStringPreserveDecimals(downPayment));
   };
 
   useEffect(() => {
@@ -106,6 +110,7 @@ export default function LoanCalculator() {
                 placeholder="Enter interest rate (%)"
                 suffix="%"
                 type="number"
+                step="any"
                 error={errors.interestRate}
               />
 
