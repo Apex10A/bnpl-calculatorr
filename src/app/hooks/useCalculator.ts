@@ -6,6 +6,7 @@ interface LoanInputs {
   downPayment: number;
   tenure: number;
   interestRate: number;
+  merchantFee: number; // percentage, e.g., 1.5 means 1.5%
 }
 
 interface LoanResults {
@@ -25,17 +26,17 @@ export const useCalculator = () => {
     totalRepayment: 0,
   });
   const [isCalculated, setIsCalculated] = useState(false);
-  const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string }>({});
+  const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string, merchantFee?: string }>({});
 
 
 
   const calculateLoan = (inputs: LoanInputs) => {
-    const { itemCost, downPayment, tenure, interestRate } = inputs;
+    const { itemCost, downPayment, tenure, interestRate, merchantFee } = inputs;
 
     // Validation
     const thirtyPercentOfItem = itemCost * 0.30;
 
-    let errors: { downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string } = {};
+    let errors: { downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string, merchantFee?: string } = {};
 
     if (itemCost <= 0) {
       errors.itemCost = "Item cost must be greater than 0";
@@ -52,6 +53,11 @@ export const useCalculator = () => {
     if (interestRate <= 0) {
       errors.interestRate = "Interest rate must be greater than 0";
     }
+    
+    // merchant fee can be 0 or more
+    if (merchantFee < 0) {
+      errors.merchantFee = "Merchant fee cannot be negative";
+    }
 
     if (Object.keys(errors).length > 0) {
       setErrors(errors);
@@ -61,9 +67,9 @@ export const useCalculator = () => {
       setErrors({});
     }
 
-    // Step 1: Calculate fixed charges
-    const percentageFee = itemCost * 0.015; // 1.5% of item cost
-    const adjustmentFee = 6000; // Fixed ₦6,000
+    // Step 1: Calculate charges
+    const percentageFee = itemCost * (merchantFee / 100); // merchant fee % of item cost
+    const adjustmentFee = 6000; // Fixed ₦6,000 (kept as-is)
     const totalFixedCharges = percentageFee + adjustmentFee;
 
     // Step 2: Calculate effective down payment based on business rules
