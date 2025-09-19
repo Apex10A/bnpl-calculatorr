@@ -4,8 +4,8 @@ import { useState } from 'react';
 interface LoanInputs {
   itemCost: number;
   downPayment: number;
-  interestRate: number;
   tenure: number;
+  interestRate: number;
 }
 
 interface LoanResults {
@@ -25,9 +25,41 @@ export const useCalculator = () => {
     totalRepayment: 0,
   });
   const [isCalculated, setIsCalculated] = useState(false);
+  const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string }>({});
+
+
 
   const calculateLoan = (inputs: LoanInputs) => {
-    const { itemCost, downPayment, interestRate, tenure } = inputs;
+    const { itemCost, downPayment, tenure, interestRate } = inputs;
+
+    // Validation
+    const thirtyPercentOfItem = itemCost * 0.30;
+
+    let errors: { downPayment?: string, tenure?: string, itemCost?: string, interestRate?: string } = {};
+
+    if (itemCost <= 0) {
+      errors.itemCost = "Item cost must be greater than 0";
+    }
+
+    if (downPayment < thirtyPercentOfItem) {
+      errors.downPayment = "Down payment cannot be less than 30%";
+    }
+
+    if (tenure <= 0) {
+      errors.tenure = "Tenure must be greater than 0";
+    }
+
+    if (interestRate <= 0) {
+      errors.interestRate = "Interest rate must be greater than 0";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setErrors(errors);
+      setIsCalculated(false);
+      return;
+    } else {
+      setErrors({});
+    }
 
     // Step 1: Calculate fixed charges
     const percentageFee = itemCost * 0.015; // 1.5% of item cost
@@ -35,7 +67,7 @@ export const useCalculator = () => {
     const totalFixedCharges = percentageFee + adjustmentFee;
 
     // Step 2: Calculate effective down payment based on business rules
-    const thirtyPercentOfItem = itemCost * 0.30;
+    // const thirtyPercentOfItem = itemCost * 0.30;
     let effectiveDownPayment: number;
 
     if (downPayment > thirtyPercentOfItem) {
@@ -55,13 +87,13 @@ export const useCalculator = () => {
     // Step 4: Calculate interest amount
     const interestAmount = (interestRate / 100) * financedBalance;
 
-    // Step 5: Calculate monthly finance cost
+    // Step 6: Calculate monthly finance cost
     const monthlyFinanceCost = financedBalance / tenure;
 
-    // Step 6: Calculate monthly repayment
+    // Step 7: Calculate monthly repayment
     const monthlyRepayment = monthlyFinanceCost + interestAmount;
 
-    // Step 7: Calculate total repayment
+    // Step 8: Calculate total repayment
     const totalRepayment = downPayment + (monthlyRepayment * tenure);
 
     // Update results
@@ -76,9 +108,15 @@ export const useCalculator = () => {
     setIsCalculated(true);
   };
 
+  const clearErrors = () => {
+    setErrors({});
+  };
+
   return {
     calculateLoan,
     results,
     isCalculated,
+    errors,
+    clearErrors,
   };
 };

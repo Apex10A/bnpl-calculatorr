@@ -1,31 +1,50 @@
 // app/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import InputField from './components/InputField';
 import ResultCard from './components/ResultCard';
 import { useCalculator } from './hooks/useCalculator';
 
+const formatNumber = (num: number): string => {
+  return num.toLocaleString();
+};
+
 export default function LoanCalculator() {
   const [itemCost, setItemCost] = useState<string>('');
   const [downPayment, setDownPayment] = useState<string>('');
-  const [interestRate, setInterestRate] = useState<string>('');
   const [tenure, setTenure] = useState<string>('');
+  const [interestRate, setInterestRate] = useState<string>('');
 
-  const { calculateLoan, results, isCalculated } = useCalculator();
+  const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
+
+  const handleItemCostBlur = () => {
+    const num = parseFloat(itemCost.replace(/,/g, '').trim()) || 0;
+    setItemCost(formatNumber(num));
+  };
+
+  const handleDownPaymentBlur = () => {
+    const num = parseFloat(downPayment.replace(/,/g, '').trim()) || 0;
+    setDownPayment(formatNumber(num));
+  };
+
+  useEffect(() => {
+    // Clear errors when inputs change
+    clearErrors();
+  }, [itemCost, downPayment, tenure, interestRate, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
-      itemCost: parseFloat(itemCost) || 0,
-      downPayment: parseFloat(downPayment) || 0,
-      interestRate: parseFloat(interestRate) || 0,
-      tenure: parseInt(tenure) || 1,
+      itemCost: parseFloat(itemCost.replace(/,/g, '').trim()) || 0,
+      downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
+      tenure: parseInt(tenure.trim()) || 1,
+      interestRate: parseFloat(interestRate.trim()) || 0,
     };
 
     calculateLoan(inputs);
   };
 
-  const isFormValid = itemCost && downPayment && interestRate && tenure;
+  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && interestRate.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -52,28 +71,22 @@ export default function LoanCalculator() {
                 label="Item Cost"
                 value={itemCost}
                 onChange={setItemCost}
+                onBlur={handleItemCostBlur}
                 placeholder="Enter item cost"
                 prefix="₦"
-                type="number"
+                type="text"
+                error={errors.itemCost}
               />
 
               <InputField
                 label="Down Payment"
                 value={downPayment}
                 onChange={setDownPayment}
+                onBlur={handleDownPaymentBlur}
                 placeholder="Enter down payment"
                 prefix="₦"
-                type="number"
-              />
-
-              <InputField
-                label="Interest Rate"
-                value={interestRate}
-                onChange={setInterestRate}
-                placeholder="Enter interest rate"
-                suffix="%"
-                type="number"
-                step="0.1"
+                type="text"
+                error={errors.downPayment}
               />
 
               <InputField
@@ -83,6 +96,17 @@ export default function LoanCalculator() {
                 placeholder="Enter tenure in months"
                 suffix="months"
                 type="number"
+                error={errors.tenure}
+              />
+
+              <InputField
+                label="Interest Rate"
+                value={interestRate}
+                onChange={setInterestRate}
+                placeholder="Enter interest rate (%)"
+                suffix="%"
+                type="number"
+                error={errors.interestRate}
               />
 
               <button

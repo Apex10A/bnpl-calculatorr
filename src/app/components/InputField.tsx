@@ -10,6 +10,8 @@ interface InputFieldProps {
   suffix?: string;
   type?: string;
   step?: string;
+  error?: string;
+  onBlur?: () => void;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -21,6 +23,8 @@ const InputField: React.FC<InputFieldProps> = ({
   suffix,
   type = "text",
   step,
+  error,
+  onBlur,
 }) => {
   return (
     <div className="space-y-2">
@@ -38,12 +42,14 @@ const InputField: React.FC<InputFieldProps> = ({
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           step={step}
           className={`
-            w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-lg
+            w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-lg
             ${prefix ? 'pl-10' : ''}
             ${suffix ? 'pr-16' : ''}
+            ${error ? 'border-red-500' : 'border-gray-300'}
           `}
         />
         
@@ -53,6 +59,7 @@ const InputField: React.FC<InputFieldProps> = ({
           </div>
         )}
       </div>
+      {error && <p className="text-red-500 text-sm">{error}</p>}
     </div>
   );
 };
