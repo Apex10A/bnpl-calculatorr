@@ -28,7 +28,7 @@ export default function LoanCalculator() {
   const isFormValid = itemCost && downPayment && interestRate && tenure;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -152,9 +152,9 @@ export default function LoanCalculator() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-gray-600">
+        {/* <div className="text-center mt-8 text-gray-600">
           <p>Built with Next.js, TypeScript & TailwindCSS</p>
-        </div>
+        </div> */}
       </div>
     </div>
   );
