@@ -21,6 +21,7 @@ export default function LoanCalculator() {
   const [downPayment, setDownPayment] = useState<string>('');
   const [tenure, setTenure] = useState<string>('');
   const [interestRate, setInterestRate] = useState<string>('');
+  const [merchantFee, setMerchantFee] = useState<string>('0');
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
 
@@ -35,7 +36,7 @@ export default function LoanCalculator() {
   useEffect(() => {
     // Clear errors when inputs change
     clearErrors();
-  }, [itemCost, downPayment, tenure, interestRate, clearErrors]);
+  }, [itemCost, downPayment, tenure, interestRate, merchantFee, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
@@ -43,12 +44,13 @@ export default function LoanCalculator() {
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
       tenure: parseInt(tenure.trim()) || 1,
       interestRate: parseFloat(interestRate.trim()) || 0,
+      merchantFee: parseFloat(merchantFee.trim()) || 0,
     };
 
     calculateLoan(inputs);
   };
 
-  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && interestRate.trim();
+  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && interestRate.trim() && merchantFee.trim() !== '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -112,6 +114,17 @@ export default function LoanCalculator() {
                 type="number"
                 step="any"
                 error={errors.interestRate}
+              />
+
+              <InputField
+                label="Merchant Fee"
+                value={merchantFee}
+                onChange={setMerchantFee}
+                placeholder="Enter merchant fee (%) — set 0 if none"
+                suffix="%"
+                type="number"
+                step="any"
+                error={errors.merchantFee}
               />
 
               <button
