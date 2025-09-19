@@ -46,7 +46,7 @@ const InputField: React.FC<InputFieldProps> = ({
           placeholder={placeholder}
           step={step}
           className={`
-            w-full px-3 md:px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg
+            w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg
             ${prefix ? 'pl-10' : ''}
             ${suffix ? 'pr-16' : ''}
             ${error ? 'border-red-500' : 'border-gray-300'}
