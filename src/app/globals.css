@@ -18,7 +18,19 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: 'Inter', system-ui, sans-serif;
+}
+@font-face {
+  font-family: 'Clash Grotesk';
+  src: url('./fonts/ClashGrotesk-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Clash Grotesk', Arial, Helvetica, sans-serif;
 }
 
 body {

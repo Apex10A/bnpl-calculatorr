@@ -117,7 +117,7 @@ export default function LoanCalculator() {
               <button
                 onClick={handleCalculate}
                 disabled={!isFormValid}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 md:py-4 px-5 md:px-6 rounded-xl font-semibold text-base md:text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="w-full bg-blue-600  hover:bg-blue-700 text-white py-3 md:py-4 px-5 md:px-6 rounded-sm font-semibold text-base md:text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 Calculate Loan
               </button>
@@ -143,35 +143,35 @@ export default function LoanCalculator() {
                   label="Financed Balance"
                   value={results.financedBalance}
                   icon="🏦"
-                  color="bg-blue-50 border-blue-200 text-blue-800"
+                  color="bg-green-50 border-green-200 text-green-800"
                 />
 
                 <ResultCard
                   label="Interest Amount"
                   value={results.interestAmount}
                   icon="📈"
-                  color="bg-yellow-50 border-yellow-200 text-yellow-800"
+                  color="bg-green-50 border-green-200 text-green-800"
                 />
 
                 <ResultCard
                   label="Monthly Repayment"
                   value={results.monthlyRepayment}
                   icon="📅"
-                  color="bg-purple-50 border-purple-200 text-purple-800"
-                  highlight
+                  color="bg-green-50 border-green-200 text-green-800"
+                  // highlight
                 />
 
                 <ResultCard
                   label="Total Repayment"
                   value={results.totalRepayment}
                   icon="💳"
-                  color="bg-red-50 border-red-200 text-red-800"
-                  highlight
+                  color="bg-green-50 border-green-200 text-green-800"
+                  // highlight
                 />
               </div>
             ) : (
               <div className="text-center py-12">
-                <div className="text-6xl mb-4">🧮</div>
+                {/* <div className="text-6xl mb-4">🧮</div> */}
                 <p className="text-gray-500 text-lg">
                   Enter your loan details and click calculate to see your repayment summary
                 </p>
