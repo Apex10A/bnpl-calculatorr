@@ -97,6 +97,15 @@ export default function LoanCalculator() {
 
   const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && merchantFee.trim() !== '';
 
+  // Inline live error for down payment < 30% of item cost
+  const dpInlineError = (() => {
+    const ic = parseFloat(itemCost.replace(/,/g, '').trim());
+    const dp = parseFloat(downPayment.replace(/,/g, '').trim());
+    if (isNaN(ic) || ic <= 0 || isNaN(dp)) return '';
+    const minDp = ic * 0.3;
+    return dp < minDp ? 'Down payment cannot be less than 30%' : '';
+  })();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -137,7 +146,7 @@ export default function LoanCalculator() {
                 placeholder="Enter down payment"
                 prefix="₦"
                 type="text"
-                error={errors.downPayment}
+                error={errors.downPayment || dpInlineError}
               />
 
               <InputField
