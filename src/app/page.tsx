@@ -145,12 +145,12 @@ export default function LoanCalculator() {
             
             {isCalculated ? (
               <div className="space-y-4">
-                <ResultCard
+                {/* <ResultCard
                   label="Effective Down Payment"
                   value={results.effectiveDownPayment}
                   icon="💰"
                   color="bg-green-50 border-green-200 text-green-800"
-                />
+                /> */}
 
                 <ResultCard
                   label="Financed Balance"
