@@ -12,6 +12,7 @@ interface InputFieldProps {
   step?: string;
   error?: string;
   onBlur?: () => void;
+  readOnly?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -25,6 +26,7 @@ const InputField: React.FC<InputFieldProps> = ({
   step,
   error,
   onBlur,
+  readOnly = false,
 }) => {
   return (
     <div className="space-y-2">
@@ -45,11 +47,13 @@ const InputField: React.FC<InputFieldProps> = ({
           onBlur={onBlur}
           placeholder={placeholder}
           step={step}
+          readOnly={readOnly}
           className={`
             w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg
             ${prefix ? 'pl-10' : ''}
             ${suffix ? 'pr-16' : ''}
             ${error ? 'border-red-500' : 'border-gray-300'}
+            ${readOnly ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''}
           `}
         />
         
