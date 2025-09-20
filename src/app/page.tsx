@@ -20,7 +20,7 @@ export default function LoanCalculator() {
   const [itemCost, setItemCost] = useState<string>('');
   const [downPayment, setDownPayment] = useState<string>('');
   const [tenure, setTenure] = useState<string>('');
-  const [interestRate, setInterestRate] = useState<string>('');
+  const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
   const [merchantFee, setMerchantFee] = useState<string>('0');
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
@@ -33,24 +33,69 @@ export default function LoanCalculator() {
     setDownPayment(formatNumberStringPreserveDecimals(downPayment));
   };
 
+  // Helpers to mirror hook logic for auto interest rate
+  const normalizeTenure = (t: number): 3 | 4 | 6 | 9 | 12 => {
+    if (t <= 4) return t <= 3 ? 3 : 4;
+    if (t <= 6) return 6;
+    if (t <= 9) return 9;
+    return 12;
+  };
+  const getAutoInterestRate = (financedBalance: number, tenureNum: number): number => {
+    const t = normalizeTenure(tenureNum);
+    const fb = financedBalance;
+    let tier: 'A' | 'B' | 'C' | 'D';
+    if (fb >= 1_000_000) tier = 'D';
+    else if (fb >= 500_000) tier = 'C';
+    else if (fb >= 200_000) tier = 'B';
+    else tier = 'A';
+    const rates: Record<'A' | 'B' | 'C' | 'D', Record<3 | 4 | 6 | 9 | 12, number>> = {
+      A: { 3: 12, 4: 12, 6: 11, 9: 10, 12: 9.5 },
+      B: { 3: 11.5, 4: 11.5, 6: 10.5, 9: 9.5, 12: 9 },
+      C: { 3: 11, 4: 11, 6: 10, 9: 9, 12: 8.5 },
+      D: { 3: 10, 4: 10, 6: 9, 9: 8, 12: 7.5 },
+    } as const;
+    return rates[tier][t];
+  };
+
   useEffect(() => {
     // Clear errors when inputs change
     clearErrors();
-  }, [itemCost, downPayment, tenure, interestRate, merchantFee, clearErrors]);
+
+    // Auto-compute interest rate when enough inputs are present
+    const ic = parseFloat(itemCost.replace(/,/g, '').trim());
+    const dp = parseFloat(downPayment.replace(/,/g, '').trim());
+    const tn = parseInt(tenure.trim());
+    const mf = parseFloat(merchantFee.trim());
+
+    if (!isNaN(ic) && ic > 0 && !isNaN(dp) && !isNaN(tn) && tn > 0 && !isNaN(mf) && mf >= 0) {
+      const thirty = ic * 0.3;
+      const percentageFee = ic * (mf / 100);
+      const adjustmentFee = 6000;
+      const totalFixedCharges = percentageFee + adjustmentFee;
+      let effectiveDownPayment: number;
+      if (dp > thirty) effectiveDownPayment = dp - totalFixedCharges;
+      else if (dp === thirty) effectiveDownPayment = dp + totalFixedCharges;
+      else effectiveDownPayment = dp;
+      const financedBalance = Math.max(0, ic - effectiveDownPayment);
+      const rate = getAutoInterestRate(financedBalance, tn);
+      setInterestRate(String(rate));
+    } else {
+      setInterestRate('');
+    }
+  }, [itemCost, downPayment, tenure, merchantFee, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
       itemCost: parseFloat(itemCost.replace(/,/g, '').trim()) || 0,
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
       tenure: parseInt(tenure.trim()) || 1,
-      interestRate: parseFloat(interestRate.trim()) || 0,
       merchantFee: parseFloat(merchantFee.trim()) || 0,
     };
 
     calculateLoan(inputs);
   };
 
-  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && interestRate.trim() && merchantFee.trim() !== '';
+  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && merchantFee.trim() !== '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -106,14 +151,14 @@ export default function LoanCalculator() {
               />
 
               <InputField
-                label="Interest Rate"
+                label="Interest Rate (auto)"
                 value={interestRate}
                 onChange={setInterestRate}
-                placeholder="Enter interest rate (%)"
+                placeholder="Auto-calculated from financed balance and tenure"
                 suffix="%"
                 type="number"
                 step="any"
-                error={errors.interestRate}
+                readOnly
               />
 
               <InputField
@@ -145,12 +190,12 @@ export default function LoanCalculator() {
             
             {isCalculated ? (
               <div className="space-y-4">
-                {/* <ResultCard
+                <ResultCard
                   label="Effective Down Payment"
                   value={results.effectiveDownPayment}
                   icon="💰"
                   color="bg-green-50 border-green-200 text-green-800"
-                /> */}
+                />
 
                 <ResultCard
                   label="Financed Balance"
