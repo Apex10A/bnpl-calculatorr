@@ -68,20 +68,11 @@ export default function LoanCalculator() {
     const mf = parseFloat(merchantFee.trim());
 
     if (!isNaN(ic) && ic > 0 && !isNaN(dp) && !isNaN(tn) && tn > 0 && !isNaN(mf) && mf >= 0) {
-      const thirty = ic * 0.3;
       const percentageFee = ic * (mf / 100);
       const adjustmentFee = 6000;
       const totalFixedCharges = percentageFee + adjustmentFee;
-      let effectiveDownPayment: number;
-      if (dp > thirty) {
-        effectiveDownPayment = dp - totalFixedCharges;
-      } else {
-        effectiveDownPayment = dp; // includes both == 30% and < 30%
-      }
-      let financedBalance = Math.max(0, ic - effectiveDownPayment);
-      if (dp === thirty) {
-        financedBalance += totalFixedCharges; // add fees to financed balance when DP is exactly 30%
-      }
+      const effectiveDownPayment = dp - totalFixedCharges; // fees paid upfront
+      const financedBalance = Math.max(0, ic - effectiveDownPayment);
       const rate = getAutoInterestRate(financedBalance, tn);
       setInterestRate(String(rate));
     } else {
@@ -102,13 +93,17 @@ export default function LoanCalculator() {
 
   const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && merchantFee.trim() !== '';
 
-  // Inline live error for down payment < 30% of item cost
+  // Inline live error based on net down payment after fees
   const dpInlineError = (() => {
     const ic = parseFloat(itemCost.replace(/,/g, '').trim());
     const dp = parseFloat(downPayment.replace(/,/g, '').trim());
-    if (isNaN(ic) || ic <= 0 || isNaN(dp)) return '';
-    const minDp = ic * 0.3;
-    return dp < minDp ? 'Down payment cannot be less than 30%' : '';
+    const mf = parseFloat(merchantFee.trim());
+    if (isNaN(ic) || ic <= 0 || isNaN(dp) || isNaN(mf) || mf < 0) return '';
+    const percentageFee = ic * (mf / 100);
+    const adjustmentFee = 6000;
+    const netDp = dp - (percentageFee + adjustmentFee);
+    const minNet = ic * 0.3;
+    return netDp < minNet ? 'After fees, down payment must be at least 30% of item cost' : '';
   })();
 
   return (
@@ -191,7 +186,7 @@ export default function LoanCalculator() {
               <button
                 onClick={handleCalculate}
                 disabled={!isFormValid}
-                className="w-full bg-blue-600  hover:bg-blue-700 text-white py-3 md:py-4 px-5 md:px-6 rounded-sm font-semibold text-base md:text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 md:py-4 px-5 md:px-6 rounded-sm font-semibold text-base md:text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 Calculate Loan
               </button>
