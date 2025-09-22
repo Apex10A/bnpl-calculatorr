@@ -1,5 +1,5 @@
 // app/components/InputField.tsx
-import React from 'react';
+import React, { useRef } from 'react';
 
 interface InputFieldProps {
   label: string;
@@ -13,7 +13,18 @@ interface InputFieldProps {
   error?: string;
   onBlur?: () => void;
   readOnly?: boolean;
+  formatThousands?: boolean; // formats numbers with commas as user types (for type="text")
 }
+
+const formatNumberStringPreserveDecimals = (value: string): string => {
+  const trimmed = value.trim().replace(/,/g, '');
+  if (trimmed === '') return '';
+  // Allow only digits and optional single decimal point
+  if (!/^[-]?\d*(\.\d+)?$/.test(trimmed)) return value; // if invalid, return original
+  const [intPart, fracPart] = trimmed.split('.');
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return fracPart !== undefined ? `${withCommas}.${fracPart}` : withCommas;
+};
 
 const InputField: React.FC<InputFieldProps> = ({
   label,
@@ -27,7 +38,33 @@ const InputField: React.FC<InputFieldProps> = ({
   error,
   onBlur,
   readOnly = false,
+  formatThousands = false,
 }) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+
+    if (readOnly) return; // ignore edits when read-only
+
+    if (formatThousands && type === 'text') {
+      const formatted = formatNumberStringPreserveDecimals(raw);
+      // Update parent with formatted value
+      onChange(formatted);
+      // Move caret to end (simple, reliable approach)
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (el) {
+          const end = formatted.length;
+          el.setSelectionRange(end, end);
+        }
+      });
+      return;
+    }
+
+    onChange(raw);
+  };
+
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700">
@@ -41,9 +78,10 @@ const InputField: React.FC<InputFieldProps> = ({
         )}
         
         <input
+          ref={inputRef}
           type={type}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           onBlur={onBlur}
           placeholder={placeholder}
           step={step}
