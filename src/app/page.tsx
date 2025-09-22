@@ -73,10 +73,15 @@ export default function LoanCalculator() {
       const adjustmentFee = 6000;
       const totalFixedCharges = percentageFee + adjustmentFee;
       let effectiveDownPayment: number;
-      if (dp > thirty) effectiveDownPayment = dp - totalFixedCharges;
-      else if (dp === thirty) effectiveDownPayment = dp + totalFixedCharges;
-      else effectiveDownPayment = dp;
-      const financedBalance = Math.max(0, ic - effectiveDownPayment);
+      if (dp > thirty) {
+        effectiveDownPayment = dp - totalFixedCharges;
+      } else {
+        effectiveDownPayment = dp; // includes both == 30% and < 30%
+      }
+      let financedBalance = Math.max(0, ic - effectiveDownPayment);
+      if (dp === thirty) {
+        financedBalance += totalFixedCharges; // add fees to financed balance when DP is exactly 30%
+      }
       const rate = getAutoInterestRate(financedBalance, tn);
       setInterestRate(String(rate));
     } else {
@@ -133,9 +138,10 @@ export default function LoanCalculator() {
                 onChange={setItemCost}
                 onBlur={handleItemCostBlur}
                 placeholder="Enter item cost"
-                prefix="₦"
+                prefix=""
                 type="text"
                 error={errors.itemCost}
+                formatThousands
               />
 
               <InputField
@@ -144,9 +150,10 @@ export default function LoanCalculator() {
                 onChange={setDownPayment}
                 onBlur={handleDownPaymentBlur}
                 placeholder="Enter down payment"
-                prefix="₦"
+                prefix=""
                 type="text"
                 error={errors.downPayment || dpInlineError}
+                formatThousands
               />
 
               <InputField

@@ -97,22 +97,23 @@ export const useCalculator = () => {
     const totalFixedCharges = percentageFee + adjustmentFee;
 
     // Step 2: Calculate effective down payment based on business rules
+    // - If DP > 30%: subtract fees from DP (user covers fees upfront)
+    // - If DP = 30%: do NOT adjust DP; fees will be added to financed balance (accrues interest)
+    // - If DP < 30%: use DP as-is
     let effectiveDownPayment: number;
     if (downPayment > thirtyPercentOfItem) {
-      // If down payment > 30%, subtract the fixed charges
       effectiveDownPayment = downPayment - totalFixedCharges;
-    } else if (downPayment === thirtyPercentOfItem) {
-      // If down payment = 30%, add the fixed charges
-      effectiveDownPayment = downPayment + totalFixedCharges;
     } else {
-      // If down payment < 30%, use as is (this case wasn't specified in docs)
-      effectiveDownPayment = downPayment;
+      effectiveDownPayment = downPayment; // includes both == 30% and < 30%
     }
 
-    // Step 3: Calculate financed balance (clamped at 0)
-    const financedBalance = Math.max(0, itemCost - effectiveDownPayment);
+    // Step 3: Calculate financed balance (clamped at 0), then add fees if DP == 30%
+    let financedBalance = Math.max(0, itemCost - effectiveDownPayment);
+    if (downPayment === thirtyPercentOfItem) {
+      financedBalance += totalFixedCharges; // fees accrue interest when DP is exactly 30%
+    }
 
-    // Step 4: Determine interest rate automatically
+    // Step 4: Determine interest rate automatically (uses updated financed balance)
     const interestRate = getAutoInterestRate(financedBalance, tenure);
 
     // Step 5: Calculate interest amount
