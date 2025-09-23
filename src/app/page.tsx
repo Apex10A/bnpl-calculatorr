@@ -71,7 +71,9 @@ export default function LoanCalculator() {
       const percentageFee = ic * (mf / 100);
       const adjustmentFee = 6000;
       const totalFixedCharges = percentageFee + adjustmentFee;
-      const effectiveDownPayment = dp - totalFixedCharges; // fees paid upfront
+      const epsilon = 0.5; // treat within 50 kobo as equal
+      const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
+      const effectiveDownPayment = isExactThirty ? (ic * 0.30) : (dp - totalFixedCharges);
       const financedBalance = Math.max(0, ic - effectiveDownPayment);
       const rate = getAutoInterestRate(financedBalance, tn);
       setInterestRate(String(rate));
@@ -99,6 +101,12 @@ export default function LoanCalculator() {
     const dp = parseFloat(downPayment.replace(/,/g, '').trim());
     const mf = parseFloat(merchantFee.trim());
     if (isNaN(ic) || ic <= 0 || isNaN(dp) || isNaN(mf) || mf < 0) return '';
+
+    // Special case: exactly 30% (±epsilon) should NOT show an error
+    const epsilon = 0.5;
+    const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
+    if (isExactThirty) return '';
+
     const percentageFee = ic * (mf / 100);
     const adjustmentFee = 6000;
     const netDp = dp - (percentageFee + adjustmentFee);
@@ -203,7 +211,20 @@ export default function LoanCalculator() {
               <div className="space-y-4">
                 <ResultCard
                   label="Down Payment"
-                  value={parseFloat(downPayment.replace(/,/g, '').trim()) || 0}
+                  value={(function(){
+                    const ic = parseFloat(itemCost.replace(/,/g, '').trim()) || 0;
+                    const dp = parseFloat(downPayment.replace(/,/g, '').trim()) || 0;
+                    const mf = parseFloat(merchantFee.trim()) || 0;
+                    const epsilon = 0.5;
+                    const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
+                    if (isExactThirty) {
+                      // Show 30% + charges for display when exactly 30% entered
+                      const percentageFee = ic * (mf / 100);
+                      const adjustmentFee = 6000;
+                      return ic * 0.30 + percentageFee + adjustmentFee;
+                    }
+                    return dp;
+                  })()}
                   icon="💰"
                   color="bg-green-50 border-green-200 text-green-800"
                 />

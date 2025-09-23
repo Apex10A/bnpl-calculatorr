@@ -63,6 +63,8 @@ export const useCalculator = () => {
 
     // Validation
     const thirtyPercentOfItem = itemCost * 0.30;
+    const epsilon = 0.5; // treat within 50 kobo as equal to handle rounding
+    const isExactThirty = Math.abs(downPayment - thirtyPercentOfItem) <= epsilon;
 
     let errors: { downPayment?: string, tenure?: string, itemCost?: string, merchantFee?: string } = {};
 
@@ -76,7 +78,7 @@ export const useCalculator = () => {
       const totalChargesCheck = percentageFeeCheck + adjustmentFeeCheck;
       const minRequired = itemCost * 0.30;
       const netDP = downPayment - totalChargesCheck;
-      if (netDP < minRequired) {
+      if (!isExactThirty && netDP < minRequired) {
         errors.downPayment = "After fees, down payment must be at least 30% of item cost";
       }
     }
@@ -100,11 +102,19 @@ export const useCalculator = () => {
 
     // Step 1: Calculate charges
     const percentageFee = itemCost * (merchantFee / 100); // merchant fee % of item cost
-    const adjustmentFee = 6000; // Fixed ₦6,000 (kept as-is)
+    const adjustmentFee = 6000; // Fixed ₦6,000
     const totalFixedCharges = percentageFee + adjustmentFee;
 
-    // Step 2: Effective down payment = entered DP minus fees (fees paid upfront)
-    let effectiveDownPayment: number = downPayment - totalFixedCharges;
+    // Step 2: Effective down payment for financing calculations
+    // Special case: if entered DP is exactly 30% (±epsilon), keep financed balance at 70% of item cost.
+    // Treat effectiveDownPayment as exactly 30%; fees are paid upfront and do not reduce financed balance.
+    let effectiveDownPayment: number;
+    if (isExactThirty) {
+      effectiveDownPayment = thirtyPercentOfItem;
+    } else {
+      // Default policy: fees are deducted from down payment for financing balance computation
+      effectiveDownPayment = downPayment - totalFixedCharges;
+    }
 
     // Step 3: Calculate financed balance (clamped at 0)
     let financedBalance = Math.max(0, itemCost - effectiveDownPayment);
