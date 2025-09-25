@@ -22,7 +22,7 @@ export default function LoanCalculator() {
   const [tenure, setTenure] = useState<string>('');
   const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
   const [merchantFee, setMerchantFee] = useState<string>('0');
-  const [chargesMode, setChargesMode] = useState<'upfront' | 'repayment'>('upfront'); // whether fees are paid now or spread over repayment
+
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
 
@@ -58,7 +58,6 @@ export default function LoanCalculator() {
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
       tenure: Math.min(Math.max(parseInt(tenure.trim()) || 1, 1), 4), // clamp to 1–4
       merchantFee: parseFloat(merchantFee.trim()) || 0,
-      chargesMode,
     };
 
     calculateLoan(inputs);
@@ -122,27 +121,23 @@ export default function LoanCalculator() {
                 formatThousands
               />
 
-              <InputField
-                label="Loan Tenure"
-                value={tenure}
-                onChange={setTenure}
-                placeholder="Enter tenure (1–4 months)"
-                suffix="months"
-                type="number"
-                error={errors.tenure}
-              />
-
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Fee Handling</label>
+                <label className="block text-sm font-medium text-gray-700">Loan Tenure</label>
                 <select
-                  value={chargesMode}
-                  onChange={(e) => setChargesMode(e.target.value as 'upfront' | 'repayment')}
+                  value={tenure}
+                  onChange={(e) => setTenure(e.target.value)}
                   className="w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg border-gray-300"
                 >
-                  <option value="upfront">Pay fees now </option>
-                  <option value="repayment">Spread fees across months</option>
+                  <option value="">Select tenure</option>
+                  <option value="1">1 month</option>
+                  <option value="2">2 months</option>
+                  <option value="3">3 months</option>
+                  <option value="4">4 months</option>
                 </select>
+                {errors.tenure && <p className="text-red-500 text-sm">{errors.tenure}</p>}
               </div>
+
+
 
               <InputField
                 label="Interest Rate (auto)"
@@ -187,14 +182,9 @@ export default function LoanCalculator() {
                 <ResultCard
                   label="Down Payment"
                   value={(function(){
-                    const ic = parseFloat(itemCost.replace(/,/g, '').trim()) || 0;
                     const dp = parseFloat(downPayment.replace(/,/g, '').trim()) || 0;
-                    const mf = parseFloat(merchantFee.trim()) || 0;
-                    const percentageFee = ic * (mf / 100);
-                    const adjustmentFee = 6000;
-                    const totalCharges = percentageFee + adjustmentFee;
-                    // Show DP plus fees if paying now; otherwise show DP only
-                    return chargesMode === 'upfront' ? dp + totalCharges : dp;
+                    // Fees are always capitalized; show only DP here
+                    return dp;
                   })()}
                   icon="💰"
                   color="bg-green-50 border-green-200 text-green-800"

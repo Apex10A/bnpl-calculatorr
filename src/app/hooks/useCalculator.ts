@@ -6,7 +6,6 @@ interface LoanInputs {
   downPayment: number;
   tenure: number;
   merchantFee: number; // percentage, e.g., 1.5 means 1.5%
-  chargesMode: 'upfront' | 'repayment'; // how to handle charges when DP is exactly 30%
 }
 
 interface LoanResults {
@@ -39,7 +38,7 @@ export const useCalculator = () => {
   const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, merchantFee?: string }>({});
 
   const calculateLoan = (inputs: LoanInputs) => {
-    const { itemCost, downPayment, tenure, merchantFee, chargesMode } = inputs;
+    const { itemCost, downPayment, tenure, merchantFee } = inputs;
 
     // Validation
     const thirtyPercentOfItem = itemCost * 0.30;
@@ -81,30 +80,14 @@ export const useCalculator = () => {
     const adjustmentFee = 6000; // Fixed ₦6,000
     const totalFixedCharges = percentageFee + adjustmentFee;
 
-    // Step 2: Effective down payment and charges handling
-    // New policy: fee handling is selectable regardless of whether DP is exactly 30%
-    // - 'upfront': fees (₦6,000 + merchant%) paid upfront with DP; financed balance uses DP + fees
-    // - 'repayment': only DP is paid now; fees are added to repayment and do not affect financed balance
-    let effectiveDownPayment: number;
-    let chargesAppliedUpfront = 0;
-    let chargesAddedToRepayment = 0;
-
-    if (chargesMode === 'upfront') {
-      // Customer pays fees now in addition to their down payment; financed balance reduces by DP only
-      // For financing math: fees do not reduce balance further; they are just paid now
-      effectiveDownPayment = downPayment; // balance reduced by DP amount
-      chargesAppliedUpfront = totalFixedCharges; // paid now
-      chargesAddedToRepayment = 0;
-    } else {
-      // Fees are capitalized into the loan; financed balance will include fees
-      effectiveDownPayment = downPayment;
-      chargesAppliedUpfront = 0;
-      chargesAddedToRepayment = 0; // no separate spreading; included in principal
-    }
+    // Step 2: Effective down payment and fees handling (always capitalize fees into principal)
+    let effectiveDownPayment: number = downPayment;
+    let chargesAppliedUpfront = 0; // no fees paid upfront
+    let chargesAddedToRepayment = 0; // not spread separately; included in principal
 
     // Step 3: Calculate financed balance (clamped at 0)
-    // If fees are spread (repayment mode), capitalize fees into financed balance
-    let financedBalance = Math.max(0, (itemCost - effectiveDownPayment) + (chargesMode === 'repayment' ? totalFixedCharges : 0));
+    // Financed balance always includes fees
+    let financedBalance = Math.max(0, (itemCost - effectiveDownPayment) + totalFixedCharges);
 
     // Step 4: Determine interest rate (fixed 7.5%)
     const interestRate = getAutoInterestRate(financedBalance, tenure);
