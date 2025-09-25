@@ -34,7 +34,7 @@ export default function LoanCalculator() {
     setDownPayment(formatNumberStringPreserveDecimals(downPayment));
   };
 
-  // Interest rate is fixed at 7.5% for 1–4 months (see hook for calculations)
+  // Interest rate is fixed at 7.5% for 1–12 months (see hook for calculations)
 
   useEffect(() => {
     // Clear errors when inputs change
@@ -56,7 +56,7 @@ export default function LoanCalculator() {
     const inputs = {
       itemCost: parseFloat(itemCost.replace(/,/g, '').trim()) || 0,
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
-      tenure: Math.min(Math.max(parseInt(tenure.trim()) || 1, 1), 4), // clamp to 1–4
+      tenure: Math.min(Math.max(parseInt(tenure.trim()) || 1, 1), 12), // clamp to 1–12
       merchantFee: parseFloat(merchantFee.trim()) || 0,
     };
 
@@ -121,21 +121,17 @@ export default function LoanCalculator() {
                 formatThousands
               />
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Loan Tenure</label>
-                <select
-                  value={tenure}
-                  onChange={(e) => setTenure(e.target.value)}
-                  className="w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg border-gray-300"
-                >
-                  <option value="">Select tenure</option>
-                  <option value="1">1 month</option>
-                  <option value="2">2 months</option>
-                  <option value="3">3 months</option>
-                  <option value="4">4 months</option>
-                </select>
-                {errors.tenure && <p className="text-red-500 text-sm">{errors.tenure}</p>}
-              </div>
+              <InputField
+                label="Loan Tenure"
+                value={tenure}
+                onChange={setTenure}
+                placeholder="Enter tenure (1-12 months)"
+                suffix="months"
+                type="number"
+                min={1}
+                max={12}
+                error={errors.tenure}
+              />
 
 
 
@@ -143,7 +139,7 @@ export default function LoanCalculator() {
                 label="Interest Rate (auto)"
                 value={interestRate}
                 onChange={setInterestRate}
-                placeholder="Fixed at 7.5% for 1–4 months"
+                placeholder="Fixed at 7.5% for 1–12 months"
                 suffix="%"
                 type="number"
                 step="any"
