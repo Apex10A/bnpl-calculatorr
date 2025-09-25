@@ -6,6 +6,7 @@ interface LoanInputs {
   downPayment: number;
   tenure: number;
   merchantFee: number; // percentage, e.g., 1.5 means 1.5%
+  chargesMode: 'upfront' | 'repayment'; // how to handle charges when DP is exactly 30%
 }
 
 interface LoanResults {
@@ -14,37 +15,15 @@ interface LoanResults {
   interestAmount: number;
   monthlyRepayment: number;
   totalRepayment: number;
+  chargesAppliedUpfront: number; // how much of charges paid upfront
+  chargesAddedToRepayment: number; // how much of charges added to repayment
 }
 
-// Map tenure into buckets: 3/4, 6, 9, 12
-const normalizeTenure = (tenure: number): 3 | 4 | 6 | 9 | 12 => {
-  if (tenure <= 4) return tenure <= 3 ? 3 : 4; // 1-3 => 3, 4 => 4
-  if (tenure <= 6) return 6;
-  if (tenure <= 9) return 9;
-  return 12; // 10-12+ => 12
-};
-
-// Determine interest rate based on financed balance and tenure bucket
-const getAutoInterestRate = (financedBalance: number, tenure: number): number => {
-  const t = normalizeTenure(tenure);
-  const fb = financedBalance;
-
-  // Choose tier by financed balance
-  let tier: 'A' | 'B' | 'C' | 'D';
-  if (fb >= 1_000_000) tier = 'D';
-  else if (fb >= 500_000) tier = 'C';
-  else if (fb >= 200_000) tier = 'B';
-  else /* fb < 200,000 (incl. <100k) */ tier = 'A';
-
-  // Rates per tier and tenure
-  const rates: Record<typeof tier, Record<3 | 4 | 6 | 9 | 12, number>> = {
-    A: { 3: 12, 4: 12, 6: 11, 9: 10, 12: 9.5 },
-    B: { 3: 11.5, 4: 11.5, 6: 10.5, 9: 9.5, 12: 9 },
-    C: { 3: 11, 4: 11, 6: 10, 9: 9, 12: 8.5 },
-    D: { 3: 10, 4: 10, 6: 9, 9: 8, 12: 7.5 },
-  } as const;
-
-  return rates[tier][t];
+// Determine interest rate: fixed 7.5% for 1–4 months
+const getAutoInterestRate = (_financedBalance: number, tenure: number): number => {
+  // Business rule: fixed 7.5% (total) for 1-4 months
+  // We still accept tenure up to 4 (cap if needed by caller/UI)
+  return 7.5;
 };
 
 export const useCalculator = () => {
@@ -54,12 +33,14 @@ export const useCalculator = () => {
     interestAmount: 0,
     monthlyRepayment: 0,
     totalRepayment: 0,
+    chargesAppliedUpfront: 0,
+    chargesAddedToRepayment: 0,
   });
   const [isCalculated, setIsCalculated] = useState(false);
   const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, merchantFee?: string }>({});
 
   const calculateLoan = (inputs: LoanInputs) => {
-    const { itemCost, downPayment, tenure, merchantFee } = inputs;
+    const { itemCost, downPayment, tenure, merchantFee, chargesMode } = inputs;
 
     // Validation
     const thirtyPercentOfItem = itemCost * 0.30;
@@ -105,31 +86,46 @@ export const useCalculator = () => {
     const adjustmentFee = 6000; // Fixed ₦6,000
     const totalFixedCharges = percentageFee + adjustmentFee;
 
-    // Step 2: Effective down payment for financing calculations
-    // Special case: if entered DP is exactly 30% (±epsilon), keep financed balance at 70% of item cost.
-    // Treat effectiveDownPayment as exactly 30%; fees are paid upfront and do not reduce financed balance.
+    // Step 2: Effective down payment and charges handling
+    // Two modes when DP is exactly 30%:
+    // - 'upfront': fees (₦6,000 + merchant%) paid upfront with DP; financed balance stays 70% of item cost
+    // - 'repayment': only 30% is paid now; fees are added to repayment (do not affect financed balance)
     let effectiveDownPayment: number;
+    let chargesAppliedUpfront = 0;
+    let chargesAddedToRepayment = 0;
+
     if (isExactThirty) {
-      effectiveDownPayment = thirtyPercentOfItem;
+      if (chargesMode === 'upfront') {
+        effectiveDownPayment = thirtyPercentOfItem; // financed balance fixed at 70%
+        chargesAppliedUpfront = totalFixedCharges;  // user pays charges now
+        chargesAddedToRepayment = 0;
+      } else {
+        // repayment mode: user pays only 30% now; charges go into repayment
+        effectiveDownPayment = thirtyPercentOfItem;
+        chargesAppliedUpfront = 0;
+        chargesAddedToRepayment = totalFixedCharges;
+      }
     } else {
       // Default policy: fees are deducted from down payment for financing balance computation
       effectiveDownPayment = downPayment - totalFixedCharges;
+      chargesAppliedUpfront = Math.min(totalFixedCharges, downPayment); // conceptually paid from DP
+      chargesAddedToRepayment = 0;
     }
 
     // Step 3: Calculate financed balance (clamped at 0)
     let financedBalance = Math.max(0, itemCost - effectiveDownPayment);
 
-    // Step 4: Determine interest rate automatically (uses updated financed balance)
+    // Step 4: Determine interest rate (fixed 7.5%)
     const interestRate = getAutoInterestRate(financedBalance, tenure);
 
-    // Step 5: Calculate interest amount
+    // Step 5: Calculate base interest amount
     const interestAmount = (interestRate / 100) * financedBalance;
 
     // Step 6: Calculate monthly finance cost
     const monthlyFinanceCost = financedBalance / tenure;
 
-    // Step 7: Calculate monthly repayment
-    const monthlyRepayment = monthlyFinanceCost + interestAmount;
+    // Step 7: Calculate monthly repayment: finance + interest + any charges spread into repayment
+    const monthlyRepayment = monthlyFinanceCost + interestAmount + (chargesAddedToRepayment / tenure);
 
     // Step 8: Calculate total repayment
     const totalRepayment = monthlyRepayment * tenure;
@@ -141,6 +137,8 @@ export const useCalculator = () => {
       interestAmount,
       monthlyRepayment,
       totalRepayment,
+      chargesAppliedUpfront,
+      chargesAddedToRepayment,
     });
 
     setIsCalculated(true);
