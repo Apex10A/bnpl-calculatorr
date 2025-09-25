@@ -22,7 +22,7 @@ export default function LoanCalculator() {
   const [tenure, setTenure] = useState<string>('');
   const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
   const [merchantFee, setMerchantFee] = useState<string>('0');
-  const [chargesMode, setChargesMode] = useState<'upfront' | 'repayment'>('upfront');
+  const [chargesMode, setChargesMode] = useState<'upfront' | 'repayment'>('upfront'); // whether fees are paid now or spread over repayment
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
 
@@ -66,23 +66,15 @@ export default function LoanCalculator() {
 
   const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && merchantFee.trim() !== '';
 
-  // Inline live error based on net down payment after fees
+  // Inline live error: DP must be at least 30% of item cost
   const dpInlineError = (() => {
     const ic = parseFloat(itemCost.replace(/,/g, '').trim());
     const dp = parseFloat(downPayment.replace(/,/g, '').trim());
-    const mf = parseFloat(merchantFee.trim());
-    if (isNaN(ic) || ic <= 0 || isNaN(dp) || isNaN(mf) || mf < 0) return '';
+    if (isNaN(ic) || ic <= 0 || isNaN(dp)) return '';
 
-    // Special case: exactly 30% (±epsilon) should NOT show an error
-    const epsilon = 0.5;
-    const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
-    if (isExactThirty) return '';
-
-    const percentageFee = ic * (mf / 100);
-    const adjustmentFee = 6000;
-    const netDp = dp - (percentageFee + adjustmentFee);
-    const minNet = ic * 0.3;
-    return netDp < minNet ? 'After fees, down payment must be at least 30% of item cost' : '';
+    const epsilon = 0.5; // treat within 50 kobo as equal
+    const minDp = ic * 0.30;
+    return dp + epsilon < minDp ? 'Down payment must be at least 30% of item cost' : '';
   })();
 
   return (
@@ -141,14 +133,14 @@ export default function LoanCalculator() {
               />
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Charge Handling (when DP is exactly 30%)</label>
+                <label className="block text-sm font-medium text-gray-700">Fee Handling</label>
                 <select
                   value={chargesMode}
                   onChange={(e) => setChargesMode(e.target.value as 'upfront' | 'repayment')}
                   className="w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg border-gray-300"
                 >
-                  <option value="upfront">Add charges to down payment (pay now)</option>
-                  <option value="repayment">Add charges to total repayment (spread across months)</option>
+                  <option value="upfront">Pay fees now </option>
+                  <option value="repayment">Spread fees across months</option>
                 </select>
               </div>
 
@@ -198,16 +190,11 @@ export default function LoanCalculator() {
                     const ic = parseFloat(itemCost.replace(/,/g, '').trim()) || 0;
                     const dp = parseFloat(downPayment.replace(/,/g, '').trim()) || 0;
                     const mf = parseFloat(merchantFee.trim()) || 0;
-                    const epsilon = 0.5;
-                    const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
-                    if (isExactThirty) {
-                      const percentageFee = ic * (mf / 100);
-                      const adjustmentFee = 6000;
-                      const totalCharges = percentageFee + adjustmentFee;
-                      // Respect selected mode: show either 30% + charges (upfront) or just 30% (repayment)
-                      return chargesMode === 'upfront' ? ic * 0.30 + totalCharges : ic * 0.30;
-                    }
-                    return dp;
+                    const percentageFee = ic * (mf / 100);
+                    const adjustmentFee = 6000;
+                    const totalCharges = percentageFee + adjustmentFee;
+                    // Show DP plus fees if paying now; otherwise show DP only
+                    return chargesMode === 'upfront' ? dp + totalCharges : dp;
                   })()}
                   icon="💰"
                   color="bg-green-50 border-green-200 text-green-800"
