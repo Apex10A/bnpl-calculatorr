@@ -19,10 +19,9 @@ interface LoanResults {
   chargesAddedToRepayment: number; // how much of charges added to repayment
 }
 
-// Determine interest rate: fixed 7.5% for 1–4 months
+// Determine interest rate: fixed 7.5% per month for 1–4 months
 const getAutoInterestRate = (_financedBalance: number, tenure: number): number => {
-  // Business rule: fixed 7.5% (total) for 1-4 months
-  // We still accept tenure up to 4 (cap if needed by caller/UI)
+  // Business rule: fixed 7.5% per month (applied each month) for 1–4 months
   return 7.5;
 };
 
@@ -54,13 +53,9 @@ export const useCalculator = () => {
     }
 
     {
-      const percentageFeeCheck = itemCost * (merchantFee / 100);
-      const adjustmentFeeCheck = 6000;
-      const totalChargesCheck = percentageFeeCheck + adjustmentFeeCheck;
       const minRequired = itemCost * 0.30;
-      const netDP = downPayment - totalChargesCheck;
-      if (!isExactThirty && netDP < minRequired) {
-        errors.downPayment = "After fees, down payment must be at least 30% of item cost";
+      if (downPayment + epsilon < minRequired) {
+        errors.downPayment = "Down payment must be at least 30% of item cost";
       }
     }
 
@@ -87,54 +82,48 @@ export const useCalculator = () => {
     const totalFixedCharges = percentageFee + adjustmentFee;
 
     // Step 2: Effective down payment and charges handling
-    // Two modes when DP is exactly 30%:
-    // - 'upfront': fees (₦6,000 + merchant%) paid upfront with DP; financed balance stays 70% of item cost
-    // - 'repayment': only 30% is paid now; fees are added to repayment (do not affect financed balance)
+    // New policy: fee handling is selectable regardless of whether DP is exactly 30%
+    // - 'upfront': fees (₦6,000 + merchant%) paid upfront with DP; financed balance uses DP + fees
+    // - 'repayment': only DP is paid now; fees are added to repayment and do not affect financed balance
     let effectiveDownPayment: number;
     let chargesAppliedUpfront = 0;
     let chargesAddedToRepayment = 0;
 
-    if (isExactThirty) {
-      if (chargesMode === 'upfront') {
-        effectiveDownPayment = thirtyPercentOfItem; // financed balance fixed at 70%
-        chargesAppliedUpfront = totalFixedCharges;  // user pays charges now
-        chargesAddedToRepayment = 0;
-      } else {
-        // repayment mode: user pays only 30% now; charges go into repayment
-        effectiveDownPayment = thirtyPercentOfItem;
-        chargesAppliedUpfront = 0;
-        chargesAddedToRepayment = totalFixedCharges;
-      }
-    } else {
-      // Default policy: fees are deducted from down payment for financing balance computation
-      effectiveDownPayment = downPayment - totalFixedCharges;
-      chargesAppliedUpfront = Math.min(totalFixedCharges, downPayment); // conceptually paid from DP
+    if (chargesMode === 'upfront') {
+      // Customer pays fees now in addition to their down payment; financed balance reduces by DP only
+      // For financing math: fees do not reduce balance further; they are just paid now
+      effectiveDownPayment = downPayment; // balance reduced by DP amount
+      chargesAppliedUpfront = totalFixedCharges; // paid now
       chargesAddedToRepayment = 0;
+    } else {
+      // Fees are capitalized into the loan; financed balance will include fees
+      effectiveDownPayment = downPayment;
+      chargesAppliedUpfront = 0;
+      chargesAddedToRepayment = 0; // no separate spreading; included in principal
     }
 
     // Step 3: Calculate financed balance (clamped at 0)
-    let financedBalance = Math.max(0, itemCost - effectiveDownPayment);
+    // If fees are spread (repayment mode), capitalize fees into financed balance
+    let financedBalance = Math.max(0, (itemCost - effectiveDownPayment) + (chargesMode === 'repayment' ? totalFixedCharges : 0));
 
     // Step 4: Determine interest rate (fixed 7.5%)
     const interestRate = getAutoInterestRate(financedBalance, tenure);
 
-    // Step 5: Calculate base interest amount
-    const interestAmount = (interestRate / 100) * financedBalance;
-
-    // Step 6: Calculate monthly finance cost
+    // Step 5: Calculate monthly interest and monthly finance cost
+    const monthlyInterest = (interestRate / 100) * financedBalance; // 7.5% of loan amount per month
     const monthlyFinanceCost = financedBalance / tenure;
 
-    // Step 7: Calculate monthly repayment: finance + interest + any charges spread into repayment
-    const monthlyRepayment = monthlyFinanceCost + interestAmount + (chargesAddedToRepayment / tenure);
+    // Step 6: Monthly repayment = principal portion + monthly interest + any charges spread into repayment
+    const monthlyRepayment = monthlyFinanceCost + monthlyInterest + (chargesAddedToRepayment / tenure);
 
-    // Step 8: Calculate total repayment
+    // Step 7: Total repayment across tenor
     const totalRepayment = monthlyRepayment * tenure;
 
     // Update results
     setResults({
       effectiveDownPayment,
       financedBalance,
-      interestAmount,
+      interestAmount: monthlyInterest, // monthly interest value used in monthly repayment
       monthlyRepayment,
       totalRepayment,
       chargesAppliedUpfront,
