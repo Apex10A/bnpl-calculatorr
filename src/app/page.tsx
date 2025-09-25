@@ -22,6 +22,7 @@ export default function LoanCalculator() {
   const [tenure, setTenure] = useState<string>('');
   const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
   const [merchantFee, setMerchantFee] = useState<string>('0');
+  const [chargesMode, setChargesMode] = useState<'upfront' | 'repayment'>('upfront');
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
 
@@ -33,61 +34,31 @@ export default function LoanCalculator() {
     setDownPayment(formatNumberStringPreserveDecimals(downPayment));
   };
 
-  // Helpers to mirror hook logic for auto interest rate
-  const normalizeTenure = (t: number): 3 | 4 | 6 | 9 | 12 => {
-    if (t <= 4) return t <= 3 ? 3 : 4;
-    if (t <= 6) return 6;
-    if (t <= 9) return 9;
-    return 12;
-  };
-  const getAutoInterestRate = (financedBalance: number, tenureNum: number): number => {
-    const t = normalizeTenure(tenureNum);
-    const fb = financedBalance;
-    let tier: 'A' | 'B' | 'C' | 'D';
-    if (fb >= 1_000_000) tier = 'D';
-    else if (fb >= 500_000) tier = 'C';
-    else if (fb >= 200_000) tier = 'B';
-    else tier = 'A';
-    const rates: Record<'A' | 'B' | 'C' | 'D', Record<3 | 4 | 6 | 9 | 12, number>> = {
-      A: { 3: 12, 4: 12, 6: 11, 9: 10, 12: 9.5 },
-      B: { 3: 11.5, 4: 11.5, 6: 10.5, 9: 9.5, 12: 9 },
-      C: { 3: 11, 4: 11, 6: 10, 9: 9, 12: 8.5 },
-      D: { 3: 10, 4: 10, 6: 9, 9: 8, 12: 7.5 },
-    } as const;
-    return rates[tier][t];
-  };
+  // Interest rate is fixed at 7.5% for 1–4 months (see hook for calculations)
 
   useEffect(() => {
     // Clear errors when inputs change
     clearErrors();
 
-    // Auto-compute interest rate when enough inputs are present
+    // Interest rate is fixed at 7.5% for valid inputs
     const ic = parseFloat(itemCost.replace(/,/g, '').trim());
-    const dp = parseFloat(downPayment.replace(/,/g, '').trim());
     const tn = parseInt(tenure.trim());
     const mf = parseFloat(merchantFee.trim());
 
-    if (!isNaN(ic) && ic > 0 && !isNaN(dp) && !isNaN(tn) && tn > 0 && !isNaN(mf) && mf >= 0) {
-      const percentageFee = ic * (mf / 100);
-      const adjustmentFee = 6000;
-      const totalFixedCharges = percentageFee + adjustmentFee;
-      const epsilon = 0.5; // treat within 50 kobo as equal
-      const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
-      const effectiveDownPayment = isExactThirty ? (ic * 0.30) : (dp - totalFixedCharges);
-      const financedBalance = Math.max(0, ic - effectiveDownPayment);
-      const rate = getAutoInterestRate(financedBalance, tn);
-      setInterestRate(String(rate));
+    if (!isNaN(ic) && ic > 0 && !isNaN(tn) && tn > 0 && !isNaN(mf) && mf >= 0) {
+      setInterestRate('7.5');
     } else {
       setInterestRate('');
     }
-  }, [itemCost, downPayment, tenure, merchantFee, clearErrors]);
+  }, [itemCost, tenure, merchantFee, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
       itemCost: parseFloat(itemCost.replace(/,/g, '').trim()) || 0,
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
-      tenure: parseInt(tenure.trim()) || 1,
+      tenure: Math.min(Math.max(parseInt(tenure.trim()) || 1, 1), 4), // clamp to 1–4
       merchantFee: parseFloat(merchantFee.trim()) || 0,
+      chargesMode,
     };
 
     calculateLoan(inputs);
@@ -163,17 +134,29 @@ export default function LoanCalculator() {
                 label="Loan Tenure"
                 value={tenure}
                 onChange={setTenure}
-                placeholder="Enter tenure in months"
+                placeholder="Enter tenure (1–4 months)"
                 suffix="months"
                 type="number"
                 error={errors.tenure}
               />
 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Charge Handling (when DP is exactly 30%)</label>
+                <select
+                  value={chargesMode}
+                  onChange={(e) => setChargesMode(e.target.value as 'upfront' | 'repayment')}
+                  className="w-full px-3 md:px-4 py-3 border rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base md:text-lg border-gray-300"
+                >
+                  <option value="upfront">Add charges to down payment (pay now)</option>
+                  <option value="repayment">Add charges to total repayment (spread across months)</option>
+                </select>
+              </div>
+
               <InputField
                 label="Interest Rate (auto)"
                 value={interestRate}
                 onChange={setInterestRate}
-                placeholder="Auto-calculated from financed balance and tenure"
+                placeholder="Fixed at 7.5% for 1–4 months"
                 suffix="%"
                 type="number"
                 step="any"
@@ -218,10 +201,11 @@ export default function LoanCalculator() {
                     const epsilon = 0.5;
                     const isExactThirty = Math.abs(dp - ic * 0.30) <= epsilon;
                     if (isExactThirty) {
-                      // Show 30% + charges for display when exactly 30% entered
                       const percentageFee = ic * (mf / 100);
                       const adjustmentFee = 6000;
-                      return ic * 0.30 + percentageFee + adjustmentFee;
+                      const totalCharges = percentageFee + adjustmentFee;
+                      // Respect selected mode: show either 30% + charges (upfront) or just 30% (repayment)
+                      return chargesMode === 'upfront' ? ic * 0.30 + totalCharges : ic * 0.30;
                     }
                     return dp;
                   })()}
