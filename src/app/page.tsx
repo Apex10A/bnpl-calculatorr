@@ -21,7 +21,7 @@ export default function LoanCalculator() {
   const [downPayment, setDownPayment] = useState<string>('');
   const [tenure, setTenure] = useState<string>('');
   const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
-  const [merchantFee, setMerchantFee] = useState<string>('0');
+  const merchantFee = '1.5';
 
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
@@ -43,27 +43,25 @@ export default function LoanCalculator() {
     // Interest rate is fixed at 7.5% for valid inputs
     const ic = parseFloat(itemCost.replace(/,/g, '').trim());
     const tn = parseInt(tenure.trim());
-    const mf = parseFloat(merchantFee.trim());
 
-    if (!isNaN(ic) && ic > 0 && !isNaN(tn) && tn > 0 && !isNaN(mf) && mf >= 0) {
+    if (!isNaN(ic) && ic > 0 && !isNaN(tn) && tn > 0) {
       setInterestRate('7.5');
     } else {
       setInterestRate('');
     }
-  }, [itemCost, tenure, merchantFee, clearErrors]);
+  }, [itemCost, tenure, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
       itemCost: parseFloat(itemCost.replace(/,/g, '').trim()) || 0,
       downPayment: parseFloat(downPayment.replace(/,/g, '').trim()) || 0,
       tenure: Math.min(Math.max(parseInt(tenure.trim()) || 1, 1), 12), // clamp to 1–12
-      merchantFee: parseFloat(merchantFee.trim()) || 0,
     };
 
     calculateLoan(inputs);
   };
 
-  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim() && merchantFee.trim() !== '';
+  const isFormValid = itemCost.trim() && downPayment.trim() && tenure.trim();
 
   // Inline live error: DP must be at least 30% of item cost
   const dpInlineError = (() => {
@@ -133,8 +131,6 @@ export default function LoanCalculator() {
                 error={errors.tenure}
               />
 
-
-
               <InputField
                 label="Interest Rate (auto)"
                 value={interestRate}
@@ -149,12 +145,12 @@ export default function LoanCalculator() {
               <InputField
                 label="Merchant Fee"
                 value={merchantFee}
-                onChange={setMerchantFee}
-                placeholder="Enter merchant fee (%) — set 0 if none"
+                onChange={() => {}}
+                placeholder="Fixed at 1.5%"
                 suffix="%"
                 type="number"
                 step="any"
-                error={errors.merchantFee}
+                readOnly
               />
 
               <button

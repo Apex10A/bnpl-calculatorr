@@ -5,7 +5,6 @@ interface LoanInputs {
   itemCost: number;
   downPayment: number;
   tenure: number;
-  merchantFee: number; // percentage, e.g., 1.5 means 1.5%
 }
 
 interface LoanResults {
@@ -24,6 +23,8 @@ const getAutoInterestRate = (_financedBalance: number, tenure: number): number =
   return 7.5;
 };
 
+const MERCHANT_FEE_PERCENT = 1.5;
+
 export const useCalculator = () => {
   const [results, setResults] = useState<LoanResults>({
     effectiveDownPayment: 0,
@@ -35,10 +36,10 @@ export const useCalculator = () => {
     chargesAddedToRepayment: 0,
   });
   const [isCalculated, setIsCalculated] = useState(false);
-  const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string, merchantFee?: string }>({});
+  const [errors, setErrors] = useState<{ downPayment?: string, tenure?: string, itemCost?: string }>({});
 
   const calculateLoan = (inputs: LoanInputs) => {
-    const { itemCost, downPayment, tenure, merchantFee } = inputs;
+    const { itemCost, downPayment, tenure } = inputs;
 
     // Validation
     const thirtyPercentOfItem = itemCost * 0.30;
@@ -62,11 +63,6 @@ export const useCalculator = () => {
       errors.tenure = "Tenure must be greater than 0";
     }
 
-    // merchant fee can be 0 or more
-    if (merchantFee < 0) {
-      errors.merchantFee = "Merchant fee cannot be negative";
-    }
-
     if (Object.keys(errors).length > 0) {
       setErrors(errors);
       setIsCalculated(false);
@@ -76,7 +72,7 @@ export const useCalculator = () => {
     }
 
     // Step 1: Calculate charges
-    const percentageFee = itemCost * (merchantFee / 100); // merchant fee % of item cost
+    const percentageFee = itemCost * (MERCHANT_FEE_PERCENT / 100); // merchant fee % of item cost
     const adjustmentFee = 6000; // Fixed ₦6,000
     const totalFixedCharges = percentageFee + adjustmentFee;
 
