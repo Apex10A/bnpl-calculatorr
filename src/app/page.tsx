@@ -1,4 +1,4 @@
-// app/page.tsx
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -20,8 +20,6 @@ export default function LoanCalculator() {
   const [itemCost, setItemCost] = useState<string>('');
   const [downPayment, setDownPayment] = useState<string>('');
   const [tenure, setTenure] = useState<string>('');
-  const [interestRate, setInterestRate] = useState<string>(''); // auto-computed; read-only
-  const merchantFee = '1.5';
 
 
   const { calculateLoan, results, isCalculated, errors, clearErrors } = useCalculator();
@@ -34,22 +32,9 @@ export default function LoanCalculator() {
     setDownPayment(formatNumberStringPreserveDecimals(downPayment));
   };
 
-  // Interest rate is fixed at 7.5% for 1–12 months (see hook for calculations)
-
   useEffect(() => {
-    // Clear errors when inputs change
     clearErrors();
-
-    // Interest rate is fixed at 7.5% for valid inputs
-    const ic = parseFloat(itemCost.replace(/,/g, '').trim());
-    const tn = parseInt(tenure.trim());
-
-    if (!isNaN(ic) && ic > 0 && !isNaN(tn) && tn > 0) {
-      setInterestRate('7.5');
-    } else {
-      setInterestRate('');
-    }
-  }, [itemCost, tenure, clearErrors]);
+  }, [itemCost, downPayment, tenure, clearErrors]);
 
   const handleCalculate = () => {
     const inputs = {
@@ -77,7 +62,6 @@ export default function LoanCalculator() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             BNPL Loan Calculator
@@ -88,7 +72,6 @@ export default function LoanCalculator() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Form Section */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6">
               Loan Details
@@ -131,28 +114,6 @@ export default function LoanCalculator() {
                 error={errors.tenure}
               />
 
-              <InputField
-                label="Interest Rate (auto)"
-                value={interestRate}
-                onChange={setInterestRate}
-                placeholder="Fixed at 7.5% for 1–12 months"
-                suffix="%"
-                type="number"
-                step="any"
-                readOnly
-              />
-
-              <InputField
-                label="Merchant Fee"
-                value={merchantFee}
-                onChange={() => {}}
-                placeholder="Fixed at 1.5%"
-                suffix="%"
-                type="number"
-                step="any"
-                readOnly
-              />
-
               <button
                 onClick={handleCalculate}
                 disabled={!isFormValid}
@@ -162,8 +123,6 @@ export default function LoanCalculator() {
               </button>
             </div>
           </div>
-
-          {/* Results Section */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6">
               Repayment Summary
@@ -214,7 +173,6 @@ export default function LoanCalculator() {
               </div>
             ) : (
               <div className="text-center py-12">
-                {/* <div className="text-6xl mb-4">🧮</div> */}
                 <p className="text-gray-500 text-lg">
                   Enter your loan details and click calculate to see your repayment summary
                 </p>
@@ -222,11 +180,6 @@ export default function LoanCalculator() {
             )}
           </div>
         </div>
-
-        {/* Footer */}
-        {/* <div className="text-center mt-8 text-gray-600">
-          <p>Built with Next.js, TypeScript & TailwindCSS</p>
-        </div> */}
       </div>
     </div>
   );
